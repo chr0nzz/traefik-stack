@@ -562,6 +562,7 @@ ${tm_vols}
 
     environment:
       - COOKIE_SECURE=${cookie_secure}
+$(if [[ "$CONFIG_LAYOUT" == "Directory"* ]]; then echo "      - CONFIG_DIR=/etc/traefik/config"; fi)
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-manager.rule=Host(\`${TM_HOST}\`)"
