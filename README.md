@@ -71,6 +71,9 @@ The script walks you through the following and generates a ready-to-run `docker-
   - config/
     - dynamic.yml        # (single file mode)
     - *.yml              # (directory mode - one file per service)
+- traefik-manager/
+  - config/              # Persists manager.yml and session secret
+  - backups/             # Timestamped backups of dynamic config
 ```
 
 ---
