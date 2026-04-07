@@ -487,14 +487,16 @@ ${DNS_ENV_BLOCK}"
   fi
 
   # Traefik Manager volumes
-  local tm_vols="      - /var/run/docker.sock:/var/run/docker.sock:ro"
+  local tm_vols="      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-manager/config:/app/config
+      - ./traefik-manager/backups:/app/backups"
   if [[ "$MOUNT_ACCESS_LOGS" == "true" ]]; then
     tm_vols+="
-      - ./traefik/logs:/logs:ro"
+      - ./traefik/logs:/app/logs:ro"
   fi
   if [[ "$MOUNT_CERTS" == "true" ]]; then
     tm_vols+="
-      - ./traefik/acme.json:/acme.json:ro"
+      - ./traefik/acme.json:/app/acme.json:ro"
   fi
   if [[ "$MOUNT_PLUGINS" == "true" ]]; then
     tm_vols+="
@@ -502,10 +504,10 @@ ${DNS_ENV_BLOCK}"
   fi
   if [[ "$CONFIG_LAYOUT" == "Single file"* ]]; then
     tm_vols+="
-      - ./traefik/config/dynamic.yml:/etc/traefik/config/dynamic.yml"
+      - ./traefik/config/dynamic.yml:/app/config/dynamic.yml"
   else
     tm_vols+="
-      - ./traefik/config:/etc/traefik/config"
+      - ./traefik/config:/app/config/dynamic"
   fi
 
 
@@ -574,6 +576,8 @@ EOF
 scaffold() {
   step "Creating directory structure at ${INSTALL_DIR}"
   mkdir -p "${INSTALL_DIR}/traefik/"{config,logs}
+  mkdir -p "${INSTALL_DIR}/traefik-manager/"{config,backups}
+  ok "traefik-manager/config and backups directories created"
   touch "${INSTALL_DIR}/traefik/acme.json"
   chmod 600 "${INSTALL_DIR}/traefik/acme.json"
   ok "acme.json created (chmod 600)"
