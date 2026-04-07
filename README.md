@@ -43,6 +43,12 @@ The script walks you through the following and generates a ready-to-run `docker-
 
 ---
 
+## Notes
+
+**Docker install:** if the script installs Docker for you, it will exit after installation with a prompt to re-run. This is expected - the new `docker` group requires a fresh shell session to take effect. Just run the curl command again and the setup will continue normally.
+
+---
+
 ## Requirements
 
 - A Linux server (Debian, Ubuntu, Fedora, RHEL, Arch, or compatible)
