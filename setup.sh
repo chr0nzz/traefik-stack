@@ -140,8 +140,13 @@ install_docker() {
   fi
 
   if ! docker info &>/dev/null 2>&1; then
-    warn "Group changes may require logout. Re-running remaining steps with sg docker..."
-    exec sg docker "$0"
+    echo ""
+    warn "Docker was installed but the current shell doesn't have the docker group yet."
+    warn "Please log out and back in (or open a new terminal), then re-run:"
+    echo ""
+    echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/chr0nzz/traefik-stack/main/setup.sh | bash${RESET}"
+    echo ""
+    exit 0
   fi
 }
 
