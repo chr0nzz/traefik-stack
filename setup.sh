@@ -485,10 +485,6 @@ ${DNS_ENV_BLOCK}"
     traefik_vols+="
       - ./traefik/config:/etc/traefik/config:ro"
   fi
-  if [[ "$MOUNT_PLUGINS" == "true" ]]; then
-    traefik_vols+="
-      - ./traefik/plugins:/plugins"
-  fi
 
   # Traefik Manager volumes
   local tm_vols="      - /var/run/docker.sock:/var/run/docker.sock:ro"
@@ -502,7 +498,7 @@ ${DNS_ENV_BLOCK}"
   fi
   if [[ "$MOUNT_PLUGINS" == "true" ]]; then
     tm_vols+="
-      - ./traefik/plugins:/plugins:ro"
+      - ./traefik/traefik.yml:/app/traefik.yml:ro"
   fi
   if [[ "$CONFIG_LAYOUT" == "Single file"* ]]; then
     tm_vols+="
@@ -578,7 +574,6 @@ EOF
 scaffold() {
   step "Creating directory structure at ${INSTALL_DIR}"
   mkdir -p "${INSTALL_DIR}/traefik/"{config,logs}
-  [[ "$MOUNT_PLUGINS" == "true" ]] && mkdir -p "${INSTALL_DIR}/traefik/plugins" && ok "plugins/ directory created"
   touch "${INSTALL_DIR}/traefik/acme.json"
   chmod 600 "${INSTALL_DIR}/traefik/acme.json"
   ok "acme.json created (chmod 600)"
