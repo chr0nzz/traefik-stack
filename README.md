@@ -37,7 +37,7 @@ The script walks you through the following and generates a ready-to-run `docker-
 
 **Dynamic config layout** - a single `dynamic.yml` file, or a directory where each service gets its own `.yml` file. Both are watched by Traefik and apply live without a restart.
 
-**Traefik Manager mounts** - optionally expose access logs, SSL certs (`acme.json`), and a plugins directory to Traefik Manager for richer visibility.
+**Traefik Manager mounts** - optionally expose access logs, SSL certs (`acme.json`), and the static `traefik.yml` (for the plugins tab) to Traefik Manager for richer visibility.
 
 **Docker** - if Docker is not installed, the script offers to install it for you (supports Debian/Ubuntu, RHEL/Fedora, and Arch).
 
