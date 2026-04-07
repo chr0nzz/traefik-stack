@@ -598,7 +598,33 @@ start_services() {
   ok "Services started"
 }
 
-# ─── Summary ──────────────────────────────────────────────────────────────────
+# ─── Fetch temp password from container logs ──────────────────────────────────
+
+fetch_temp_password() {
+  step "Waiting for Traefik Manager to generate temporary password"
+  TEMP_PASSWORD=""
+  local attempts=0
+  local max=20  # 20 x 1.5s = 30s timeout
+
+  while [[ $attempts -lt $max ]]; do
+    local log_line
+    log_line=$(docker logs traefik-manager 2>&1 | grep -A3 "AUTO-GENERATED" | grep "Password:" | grep -oP '(?<=Password: )\S+')
+    if [[ -n "$log_line" ]]; then
+      TEMP_PASSWORD="$log_line"
+      ok "Temporary password retrieved"
+      break
+    fi
+    sleep 1.5
+    (( attempts++ )) || true
+  done
+
+  if [[ -z "$TEMP_PASSWORD" ]]; then
+    warn "Could not retrieve temporary password from logs. Check manually:"
+    warn "  docker logs traefik-manager"
+  fi
+}
+
+
 
 print_summary() {
   local scheme="http"
@@ -611,6 +637,13 @@ print_summary() {
   echo ""
   echo -e "  Traefik dashboard   ${CYAN}${scheme}://${TRAEFIK_DASHBOARD_HOST}${RESET}"
   echo -e "  Traefik Manager     ${CYAN}${scheme}://${TM_HOST}${RESET}"
+  echo ""
+  if [[ -n "$TEMP_PASSWORD" ]]; then
+    echo -e "  ${YELLOW}${BOLD}Temporary password  ${TEMP_PASSWORD}${RESET}"
+    echo -e "  ${DIM}Change this after your first login.${RESET}"
+  else
+    echo -e "  ${YELLOW}Temporary password  run: docker logs traefik-manager${RESET}"
+  fi
   echo -e "  Install dir         ${DIM}${INSTALL_DIR}${RESET}"
   echo ""
   if [[ "$CONFIG_LAYOUT" == "Single file"* ]]; then
@@ -654,6 +687,7 @@ main() {
   build_dynamic_config
   build_compose
   start_services
+  fetch_temp_password
   print_summary
 }
 
