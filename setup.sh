@@ -512,6 +512,9 @@ ${DNS_ENV_BLOCK}"
 
 
 
+  local cookie_secure="false"
+  [[ "$TLS_TYPE" != "none" ]] && cookie_secure="true"
+
   # 443 port line
   local port_443=""
   if [[ "$TLS_TYPE" != "none" ]]; then
@@ -556,9 +559,9 @@ $(if [[ -n "$tls_label_traefik" ]]; then echo "$tls_label_traefik"; fi)
       - ${DOCKER_NETWORK}
     volumes:
 ${tm_vols}
+
     environment:
-      - COOKIE_SECURE=true
-$(if [[ "$CONFIG_LAYOUT" == "Directory"* ]]; then echo "      - CONFIG_DIR=/etc/traefik/config"; fi)
+      - COOKIE_SECURE=${cookie_secure}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-manager.rule=Host(\`${TM_HOST}\`)"
