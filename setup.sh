@@ -562,12 +562,12 @@ ${tm_vols}
 
     environment:
       - COOKIE_SECURE=${cookie_secure}
-$(if [[ "$CONFIG_LAYOUT" == "Directory"* ]]; then echo "      - CONFIG_DIR=/etc/traefik/config"; fi)
+$(if [[ "$CONFIG_LAYOUT" == "Directory"* ]]; then echo "      - CONFIG_DIR=/app/config/dynamic"; fi)
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-manager.rule=Host(\`${TM_HOST}\`)"
       - "traefik.http.routers.traefik-manager.entrypoints=${TRAEFIK_ENTRYPOINT}"
-      - "traefik.http.services.traefik-manager.loadbalancer.server.port=3000"
+      - "traefik.http.services.traefik-manager.loadbalancer.server.port=5000"
 $(if [[ -n "$tls_label_tm" ]]; then echo "$tls_label_tm"; fi)
     depends_on:
       - traefik
