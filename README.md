@@ -1,99 +1,118 @@
 # traefik-stack
 
-One-command setup for [Traefik](https://github.com/traefik/traefik) + [Traefik Manager](https://github.com/chr0nzz/traefik-manager).
+One-command installer for [Traefik](https://github.com/traefik/traefik) and [Traefik Manager](https://github.com/chr0nzz/traefik-manager).
 
-Runs an interactive setup that asks you a few questions and gets both services running in Docker - no manual config editing required.
+An interactive script that asks what you want to install and how, then generates all required config files and starts the services.
 
 ---
 
 ## Quick start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/chr0nzz/traefik-stack/main/setup.sh | bash
+curl -fsSL https://get-traefik.xyzlab.dev | bash
 ```
 
 Or if you prefer to review the script before running:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/chr0nzz/traefik-stack/main/setup.sh -o setup.sh
+curl -fsSL https://get-traefik.xyzlab.dev -o setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
 
 ---
 
-## What it does
+## Install modes
 
-The script walks you through the following and generates a ready-to-run `docker-compose.yml` and `traefik.yml` based on your answers.
+The script starts by asking what you want to install:
 
-**Deployment type** - external (internet-facing) or internal (LAN / VPN / Tailscale). If external, it shows you exactly which ports to open and pauses until you confirm.
+```
+What would you like to install?
+  1) Traefik + Traefik Manager (full stack)
+  2) Traefik Manager only
+```
 
-**Domain + subdomains** - set the hostname for the Traefik dashboard and Traefik Manager separately.
+If you choose **Traefik Manager only**, it then asks how to deploy it:
 
-**TLS / certificates** - choose one:
-- Let's Encrypt - HTTP challenge
-- Let's Encrypt - DNS challenge: Cloudflare, Route 53, DigitalOcean, Namecheap, or DuckDNS
-- No TLS (HTTP only)
-
-**Dynamic config layout** - a single `dynamic.yml` file, or a directory where each service gets its own `.yml` file. Both are watched by Traefik and apply live without a restart.
-
-**Traefik Manager mounts** - optionally expose access logs, SSL certs (`acme.json`), and the static `traefik.yml` (for the plugins tab) to Traefik Manager for richer visibility.
-
-**Docker** - if Docker is not installed, the script offers to install it for you (supports Debian/Ubuntu, RHEL/Fedora, and Arch).
-
----
-
-## Notes
-
-**Docker install:** if the script installs Docker for you, it will exit after installation with a prompt to re-run. This is expected - the new `docker` group requires a fresh shell session to take effect. Just run the curl command again and the setup will continue normally.
+```
+Deployment method
+  1) Docker
+  2) Linux service (systemd)
+```
 
 ---
 
-## Requirements
+## Mode 1 - Traefik + Traefik Manager (full stack)
 
-- A Linux server (Debian, Ubuntu, Fedora, RHEL, Arch, or compatible)
-- `curl`
-- Docker + Docker Compose (or let the script install Docker for you)
-- A domain with DNS you control
+Installs both via Docker Compose. Best for a fresh server with nothing running yet.
 
----
+The script walks you through:
 
-## What gets created
+- **Deployment type** - external (internet-facing) or internal (LAN / VPN / Tailscale). If external, it shows which ports to open and waits for confirmation.
+- **Domain + subdomains** - hostnames for the Traefik dashboard and Traefik Manager.
+- **TLS / certificates** - Let's Encrypt HTTP challenge, DNS challenge (Cloudflare, Route 53, DigitalOcean, Namecheap, DuckDNS), or no TLS.
+- **Dynamic config layout** - single `dynamic.yml` file or a directory where each service gets its own `.yml`.
+- **Optional mounts** - access logs, `acme.json`, and `traefik.yml` for the Logs, Certs, and Plugins tabs in Traefik Manager.
+- **Docker** - if Docker is not installed, the script offers to install it for you.
+
+### What gets created
 
 ```
 ~/traefik-stack/
 - docker-compose.yml
 - traefik/
-  - traefik.yml          # Traefik static config
-  - acme.json            # Let's Encrypt cert storage (chmod 600)
+  - traefik.yml
+  - acme.json
   - logs/
     - access.log
   - config/
-    - dynamic.yml        # (single file mode)
-    - *.yml              # (directory mode - one file per service)
+    - dynamic.yml        (single file mode)
+    - *.yml              (directory mode)
 - traefik-manager/
-  - config/              # Persists manager.yml and session secret
-  - backups/             # Timestamped backups of dynamic config
+  - config/
+  - backups/
 ```
 
 ---
 
-## Updating
+## Mode 2 - Traefik Manager only (Docker)
 
-```bash
-cd ~/traefik-stack
-docker compose pull
-docker compose up -d
-```
+Installs just Traefik Manager as a Docker container. Use this when Traefik is already running.
 
-Running containers are replaced in place - no manual stop needed.
+The script asks:
+
+- Whether to connect to an existing Traefik Docker network
+- Whether to expose via Traefik labels (with domain + TLS) or a direct host port
+- Dynamic config layout and optional mounts - you provide paths to your existing Traefik files
+
+---
+
+## Mode 3 - Traefik Manager only (Linux service)
+
+Installs Traefik Manager as a native systemd service. No Docker required.
+
+Requirements: Python 3.11+, `git`, `systemd`.
+
+The script handles cloning the repo, creating a Python venv, installing dependencies, writing the systemd unit file, and enabling the service.
+
+---
+
+## Notes
+
+**Docker group:** if the script installs Docker, it exits after installation with a prompt to re-run. The new `docker` group requires a fresh shell to take effect - just run the curl command again.
+
+---
+
+## Documentation
+
+Full setup guide and configuration reference: [traefik-manager.xyzlab.dev/traefik-stack](https://traefik-manager.xyzlab.dev/traefik-stack)
 
 ---
 
 ## Related
 
 - [Traefik](https://github.com/traefik/traefik) - the reverse proxy
-- [Traefik Manager](https://github.com/chr0nzz/traefik-manager) - web UI for managing Traefik without editing YAML
+- [Traefik Manager](https://github.com/chr0nzz/traefik-manager) - web UI for managing Traefik
 - [Traefik Manager Mobile](https://github.com/chr0nzz/traefik-manager-mobile) - Android companion app
 
 ---
