@@ -4,12 +4,21 @@ One-command installer for [Traefik](https://github.com/traefik/traefik) and [Tra
 
 An interactive script that asks what you want to install and how, then generates all required config files and starts the services.
 
+> [!NOTE]
+> **You are on the v1 beta branch.** This installs the `:beta` image of Traefik Manager. For the stable installer see [main](https://github.com/chr0nzz/traefik-stack/tree/main). Beta docs: [beta-tm.xyzlab.dev](https://beta-tm.xyzlab.dev)
+
 ---
 
 ## Quick start
 
+**Stable:**
 ```bash
 curl -fsSL https://get-traefik.xyzlab.dev | bash
+```
+
+**Beta:**
+```bash
+curl -fsSL https://get-traefik.xyzlab.dev/beta | bash
 ```
 
 Or if you prefer to review the script before running:
