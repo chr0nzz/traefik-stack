@@ -17,6 +17,8 @@ INSTALL_MODE=""
 DEPLOY_METHOD=""
 RESTART_METHOD=""
 TRAEFIK_CONTAINER="traefik"
+TRAEFIK_SYSTEMD="false"
+TRAEFIK_SERVICE_NAME="traefik"
 MOUNT_STATIC_CONFIG="false"
 TRAEFIK_YML_HOST_PATH=""
 SIGNAL_FILE_PATH="/signals/restart.sig"
@@ -515,18 +517,31 @@ gather_tm_native() {
     sep
     echo ""
     echo -e "  ${BOLD}-- Static Config Editor --${RESET}"
-    info "Choose how TM should restart Traefik after saving static config changes."
-    local choice
-    ask_choice "Restart method" choice \
-      "Poison pill (recommended - signal file, no Docker socket needed)" \
-      "Direct Docker socket (requires TM user to have Docker group access)"
-    case "$choice" in
-      "Poison pill"*)          RESTART_METHOD="poison-pill" ;;
-      "Direct Docker socket"*) RESTART_METHOD="socket" ;;
-    esac
-    ask "Traefik container name" "traefik" TRAEFIK_CONTAINER
-    if [[ "$RESTART_METHOD" == "poison-pill" ]]; then
+    local traefik_deploy_choice
+    ask_choice "How is Traefik running on this server?" traefik_deploy_choice \
+      "Docker" \
+      "Linux service (systemd)"
+    if [[ "$traefik_deploy_choice" == "Linux service"* ]]; then
+      TRAEFIK_SYSTEMD="true"
+      RESTART_METHOD="poison-pill"
+      ask "Traefik service name" "traefik" TRAEFIK_SERVICE_NAME
       ask "Signal file path" "/var/lib/traefik-manager/signals/restart.sig" SIGNAL_FILE_PATH
+    else
+      info "Choose how TM should restart Traefik after saving static config changes."
+      local choice
+      ask_choice "Restart method" choice \
+        "Poison pill (recommended - signal file, no Docker socket needed)" \
+        "Direct Docker socket (requires TM user to have Docker group access)"
+      case "$choice" in
+        "Poison pill"*)          RESTART_METHOD="poison-pill" ;;
+        "Direct Docker socket"*) RESTART_METHOD="socket" ;;
+      esac
+      if [[ "$RESTART_METHOD" == "socket" ]]; then
+        ask "Traefik container name" "traefik" TRAEFIK_CONTAINER
+      fi
+      if [[ "$RESTART_METHOD" == "poison-pill" ]]; then
+        ask "Signal file path" "/var/lib/traefik-manager/signals/restart.sig" SIGNAL_FILE_PATH
+      fi
     fi
   fi
 }
@@ -1051,12 +1066,39 @@ install_tm_native() {
   if [[ "$MOUNT_STATIC_CONFIG" == "true" ]]; then
     optional_env+="Environment=STATIC_CONFIG_PATH=${TRAEFIK_YML_HOST_PATH}
 Environment=RESTART_METHOD=${RESTART_METHOD}
-Environment=TRAEFIK_CONTAINER=${TRAEFIK_CONTAINER}
 "
+    if [[ "$RESTART_METHOD" == "socket" ]]; then
+      optional_env+="Environment=TRAEFIK_CONTAINER=${TRAEFIK_CONTAINER}
+"
+    fi
     if [[ "$RESTART_METHOD" == "poison-pill" ]]; then
       optional_env+="Environment=SIGNAL_FILE_PATH=${SIGNAL_FILE_PATH}
 "
     fi
+  fi
+
+  if [[ "$MOUNT_STATIC_CONFIG" == "true" && "$TRAEFIK_SYSTEMD" == "true" ]]; then
+    sudo tee /etc/systemd/system/traefik-restart.path > /dev/null <<EOF
+[Unit]
+Description=Watch for Traefik Manager restart signal
+
+[Path]
+PathExists=${SIGNAL_FILE_PATH}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo tee /etc/systemd/system/traefik-restart.service > /dev/null <<EOF
+[Unit]
+Description=Restart Traefik on signal from Traefik Manager
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rm -f ${SIGNAL_FILE_PATH} && systemctl restart ${TRAEFIK_SERVICE_NAME}'
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now traefik-restart.path
+    ok "Traefik restart watcher enabled (traefik-restart.path)"
   fi
 
   sudo tee /etc/systemd/system/traefik-manager.service > /dev/null <<EOF
@@ -1163,14 +1205,19 @@ print_static_config_summary() {
       ;;
     poison-pill)
       echo -e "  ${DIM}Restart method  poison pill (signal file)${RESET}"
-      echo -e "  ${YELLOW}⚠${RESET}  ${DIM}Add this healthcheck to your Traefik service if not already set:${RESET}"
-      echo ""
-      echo -e "    ${DIM}healthcheck:${RESET}"
-      echo -e "    ${DIM}  test: [\"CMD-SHELL\", \"[ ! -f /signals/restart.sig ] || (rm /signals/restart.sig && kill -TERM 1)\"]${RESET}"
-      echo -e "    ${DIM}  interval: 5s${RESET}"
-      echo -e "    ${DIM}  timeout: 3s${RESET}"
-      echo -e "    ${DIM}  retries: 1${RESET}"
-      echo ""
+      if [[ "$TRAEFIK_SYSTEMD" == "true" ]]; then
+        echo -e "  ${DIM}Traefik running as systemd service: ${TRAEFIK_SERVICE_NAME}${RESET}"
+        echo -e "  ${DIM}traefik-restart.path watcher is active - restarts ${TRAEFIK_SERVICE_NAME} when TM writes the signal file.${RESET}"
+      else
+        echo -e "  ${YELLOW}⚠${RESET}  ${DIM}Add this healthcheck to your Traefik service if not already set:${RESET}"
+        echo ""
+        echo -e "    ${DIM}healthcheck:${RESET}"
+        echo -e "    ${DIM}  test: [\"CMD-SHELL\", \"[ ! -f /signals/restart.sig ] || (rm /signals/restart.sig && kill -TERM 1)\"]${RESET}"
+        echo -e "    ${DIM}  interval: 5s${RESET}"
+        echo -e "    ${DIM}  timeout: 3s${RESET}"
+        echo -e "    ${DIM}  retries: 1${RESET}"
+        echo ""
+      fi
       ;;
     socket)
       echo -e "  ${DIM}Restart method  direct Docker socket${RESET}"
